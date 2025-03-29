@@ -15,7 +15,7 @@ export function TextToSpeechMode({ language }: { language: string }) {
   const [speechRate, setSpeechRate] = useState(1);
   const [voiceType, setVoiceType] = useState('female');
 
-  const { speak, voices } = useSpeechSynthesis(language);
+  const { speak, voices, speaking, cancel } = useSpeechSynthesis(language);
 
   // Get saved phrases
   const { data: savedPhrases = [] } = useQuery<SavedPhrase[]>({
@@ -47,6 +47,11 @@ export function TextToSpeechMode({ language }: { language: string }) {
   });
 
   const handleSpeak = () => {
+    if (speaking) {
+      cancel();
+      return;
+    }
+    
     if (text.trim()) {
       speak(text, {
         rate: speechRate,
@@ -68,6 +73,11 @@ export function TextToSpeechMode({ language }: { language: string }) {
   };
 
   const handleSpeakSavedPhrase = (phraseText: string) => {
+    if (speaking) {
+      cancel();
+      return;
+    }
+    
     speak(phraseText, {
       rate: speechRate,
       voice: getSelectedVoice()
@@ -87,86 +97,122 @@ export function TextToSpeechMode({ language }: { language: string }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-5">
-      <div className="bg-white rounded-lg shadow-md p-5 mb-4">
-        <h2 className="text-xl font-bold text-neutral-600 mb-2">Text to Speech</h2>
-        <p className="text-neutral-400 mb-4">Type text below and it will be spoken aloud. Save common phrases for quick access.</p>
-        
-        <textarea 
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type what you want to say..." 
-          className="w-full border border-neutral-300 rounded-lg p-4 min-h-32 mb-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-        />
-        
-        <div className="flex space-x-2 mb-4">
-          <button 
-            onClick={handleSpeak}
-            className="flex-1 bg-primary hover:bg-primary-dark text-white py-3 rounded-lg font-medium flex items-center justify-center"
-          >
-            <span className="material-icons mr-2">volume_up</span>
-            Speak
-          </button>
-          <button 
-            onClick={handleSavePhrase}
-            disabled={text.trim() === ''}
-            className="flex-1 bg-secondary hover:bg-secondary-dark text-neutral-600 py-3 rounded-lg font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="material-icons mr-2">save</span>
-            Save Phrase
-          </button>
+    <div className="flex-1 flex flex-col p-5 space-y-4">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100">
+        <div className="border-b border-slate-100 p-4">
+          <h2 className="text-xl font-bold text-gradient">Text to Speech</h2>
+          <p className="text-slate-500 text-sm mt-1">Type text below and it will be spoken aloud.</p>
         </div>
         
-        <div className="flex items-center mb-4">
-          <span className="mr-2 text-neutral-500">Voice:</span>
-          <select 
-            value={voiceType}
-            onChange={(e) => setVoiceType(e.target.value)}
-            className="border border-neutral-300 rounded p-2 bg-white"
-          >
-            <option value="female">Female (Default)</option>
-            <option value="male">Male</option>
-          </select>
+        <div className="p-4">
+          <textarea 
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type what you want to say..." 
+            className="w-full border border-slate-200 rounded-xl p-4 min-h-32 mb-4 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-slate-700 placeholder:text-slate-400 resize-none"
+          />
           
-          <span className="ml-4 mr-2 text-neutral-500">Speed:</span>
-          <div className="w-20">
-            <Slider 
-              value={[speechRate]} 
-              min={0.5} 
-              max={2} 
-              step={0.1}
-              onValueChange={(values) => setSpeechRate(values[0])}
-            />
+          <div className="flex gap-3 mb-5">
+            <button 
+              onClick={handleSpeak}
+              className={`flex-1 ${
+                speaking 
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500' 
+                  : 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary-dark hover:to-primary'
+              } text-white py-3 rounded-full font-medium flex items-center justify-center shadow-sm transition-all duration-200 hover:shadow`}
+            >
+              <span className="material-icons mr-2">{speaking ? 'stop' : 'volume_up'}</span>
+              {speaking ? 'Stop' : 'Speak'}
+            </button>
+            <button 
+              onClick={handleSavePhrase}
+              disabled={text.trim() === ''}
+              className="flex-1 bg-gradient-to-r from-slate-100 to-white text-slate-700 border border-slate-200 py-3 rounded-full font-medium flex items-center justify-center shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-300"
+            >
+              <span className="material-icons mr-2">bookmark_add</span>
+              Save Phrase
+            </button>
+          </div>
+          
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="flex items-center min-w-32">
+                <span className="text-primary mr-2"><span className="material-icons text-sm">record_voice_over</span></span>
+                <div className="flex items-center">
+                  <span className="text-slate-600 text-sm mr-2">Voice:</span>
+                  <select 
+                    value={voiceType}
+                    onChange={(e) => setVoiceType(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-lg p-1.5 text-sm text-slate-700 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  >
+                    <option value="female">Female (Default)</option>
+                    <option value="male">Male</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex items-center flex-1 min-w-40">
+                <span className="text-primary mr-2"><span className="material-icons text-sm">speed</span></span>
+                <span className="text-slate-600 text-sm mr-2">Speed: {speechRate.toFixed(1)}x</span>
+                <div className="w-full max-w-36">
+                  <Slider 
+                    value={[speechRate]} 
+                    min={0.5} 
+                    max={2} 
+                    step={0.1}
+                    onValueChange={(values) => setSpeechRate(values[0])}
+                    className="mt-0.5"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <h3 className="font-medium text-neutral-600 mb-2">Saved Phrases</h3>
-        <div className="space-y-2">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100">
+        <div className="border-b border-slate-100 p-4 flex justify-between items-center">
+          <div className="flex items-center">
+            <span className="material-icons text-primary mr-2">bookmarks</span>
+            <h3 className="font-medium text-slate-700">Saved Phrases</h3>
+          </div>
+          <span className="bg-slate-100 text-xs font-medium px-2 py-1 rounded-full text-slate-500">
+            {savedPhrases.length} phrases
+          </span>
+        </div>
+        
+        <div className="p-2 max-h-60 overflow-y-auto">
           {savedPhrases.length > 0 ? (
-            savedPhrases.map((phrase) => (
-              <div key={phrase.id} className="flex items-center justify-between p-3 bg-neutral-100 rounded">
-                <span className="flex-1">{phrase.text}</span>
-                <div className="flex">
-                  <button 
-                    onClick={() => handleSpeakSavedPhrase(phrase.text)}
-                    className="p-2 text-primary hover:bg-neutral-200 rounded-full"
-                  >
-                    <span className="material-icons">volume_up</span>
-                  </button>
-                  <button 
-                    onClick={() => handleDeletePhrase(phrase.id)}
-                    className="p-2 text-neutral-400 hover:bg-neutral-200 rounded-full"
-                  >
-                    <span className="material-icons">delete</span>
-                  </button>
+            <div className="divide-y divide-slate-100">
+              {savedPhrases.map((phrase) => (
+                <div key={phrase.id} className="p-2 hover:bg-slate-50 rounded-lg transition-colors group">
+                  <div className="flex items-center">
+                    <p className="flex-1 text-slate-700 line-clamp-1 text-sm">{phrase.text}</p>
+                    <div className="flex">
+                      <button 
+                        onClick={() => handleSpeakSavedPhrase(phrase.text)}
+                        className="p-2 text-slate-400 hover:text-primary rounded-full"
+                        title="Speak phrase"
+                      >
+                        <span className="material-icons text-sm">volume_up</span>
+                      </button>
+                      <button 
+                        onClick={() => handleDeletePhrase(phrase.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete phrase"
+                      >
+                        <span className="material-icons text-sm">delete</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           ) : (
-            <div className="text-center p-4 text-neutral-400">
-              No saved phrases yet. Save some phrases to access them quickly.
+            <div className="text-center p-6 text-slate-400 flex flex-col items-center">
+              <span className="material-icons text-slate-300 text-3xl mb-2">bookmark_border</span>
+              <p>No saved phrases yet</p>
+              <p className="text-xs mt-1">Save phrases for quick access</p>
             </div>
           )}
         </div>

@@ -9,8 +9,8 @@ type ModeTabsProps = {
 
 export function ModeTabs({ activeMode, onModeChange }: ModeTabsProps) {
   return (
-    <div className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-      <div className="flex text-center">
+    <div className="bg-white sticky top-0 z-10 px-3 pt-3 shadow-sm">
+      <div className="flex overflow-x-auto no-scrollbar rounded-xl bg-slate-100 p-1">
         <TabButton 
           mode="call" 
           label="Phone Call" 
@@ -56,14 +56,14 @@ function TabButton({ mode, label, icon, isActive, onClick }: TabButtonProps) {
   return (
     <button 
       onClick={onClick} 
-      className={`flex-1 py-3 px-2 font-medium flex flex-col items-center text-sm ${
+      className={`flex-1 py-2.5 px-3 min-w-24 font-medium flex items-center justify-center gap-2 text-sm rounded-lg transition-all duration-200 ${
         isActive 
-        ? 'bg-primary text-white' 
-        : 'bg-neutral-200 text-neutral-600'
+        ? 'bg-white text-primary shadow-sm' 
+        : 'bg-transparent text-slate-600 hover:bg-white/50'
       }`}
     >
-      <span className="material-icons mb-1">{icon}</span>
-      {label}
+      <span className={`material-icons text-lg ${isActive ? 'text-primary' : 'text-slate-500'}`}>{icon}</span>
+      <span className="whitespace-nowrap">{label}</span>
     </button>
   );
 }

@@ -24,7 +24,12 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col">
+    <div className="max-w-xl mx-auto bg-gradient-to-b from-slate-50 to-white min-h-screen shadow-xl flex flex-col relative overflow-hidden">
+      {/* Background pattern */}
+      <div className="absolute top-0 left-0 right-0 h-40 bg-primary/5 -z-10 opacity-50">
+        <div className="absolute inset-0 bg-grid-slate-200/50"></div>
+      </div>
+      
       {/* Header with language selector */}
       <Header 
         selectedLanguage={language} 
@@ -38,10 +43,12 @@ export default function Home() {
       />
       
       {/* Active mode content */}
-      {activeMode === 'call' && <PhoneCallMode language={language} />}
-      {activeMode === 'stt' && <SpeechToTextMode language={language} />}
-      {activeMode === 'tts' && <TextToSpeechMode language={language} />}
-      {activeMode === 'sign' && <SignLanguageMode />}
+      <div className="flex-1 overflow-y-auto pb-2">
+        {activeMode === 'call' && <PhoneCallMode language={language} />}
+        {activeMode === 'stt' && <SpeechToTextMode language={language} />}
+        {activeMode === 'tts' && <TextToSpeechMode language={language} />}
+        {activeMode === 'sign' && <SignLanguageMode />}
+      </div>
       
       {/* Footer */}
       <Footer />
