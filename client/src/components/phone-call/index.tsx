@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useSpeechSynthesis } from '@/hooks/use-speech-synthesis';
+import { apiRequest } from '@/lib/queryClient';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { TooltipContent } from '@/components/ui/tooltip';
@@ -35,6 +36,12 @@ export function PhoneCallMode({ language }: { language: string }) {
   
   const { speak, speaking, cancel } = useSpeechSynthesis(language);
 
+  // Recording related state
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
+  const [recordedChunks, setRecordedChunks] = useState<BlobPart[]>([]);
+  const [activeCallId, setActiveCallId] = useState<number | null>(null);
+  
   // Quick response phrases with categories
   const quickResponses = {
     general: [
@@ -74,23 +81,33 @@ export function PhoneCallMode({ language }: { language: string }) {
 
   // Handle transcript changes (caller's speech to text)
   useEffect(() => {
-    if (transcript && transcript.trim() !== '' && isCallActive && !listening) {
+    // Check if we have a transcript and if the call is active
+    if (transcript && transcript.trim() !== '' && isCallActive) {
+      console.log("Received transcript:", transcript, "Listening:", listening);
+      
+      // Create a new message from the caller
       const newMessage: Message = {
         id: Date.now().toString(),
         text: transcript,
         sender: 'caller',
       };
-      setMessages(prev => [...prev, newMessage]);
-      resetTranscript();
       
-      // Start listening again after a short delay
-      setTimeout(() => {
-        if (isCallActive) {
-          startListening();
-        }
-      }, 1000);
+      // Add it to our messages list
+      setMessages(prev => [...prev, newMessage]);
+      
+      // Reset the transcript to prepare for new speech
+      resetTranscript();
     }
-  }, [transcript, isCallActive, listening, resetTranscript, startListening]);
+  }, [transcript, isCallActive, resetTranscript]);
+  
+  // Ensure we keep listening during an active call
+  useEffect(() => {
+    if (isCallActive && !listening && !useVoiceResponse) {
+      // If call is active but we're not listening, start listening
+      console.log("Starting speech recognition for caller...");
+      startListening();
+    }
+  }, [isCallActive, listening, useVoiceResponse, startListening]);
 
   // Auto scroll to bottom of messages
   useEffect(() => {
@@ -99,27 +116,193 @@ export function PhoneCallMode({ language }: { language: string }) {
     }
   }, [messages]);
 
-  const handleStartCall = (type: 'deaf' | 'mute' | 'both') => {
-    setIsCallActive(true);
-    setAccessibility(type);
-    setMessages([]);
-    startListening(); // Start converting caller's speech to text
+  // Initialize recording functionality
+  useEffect(() => {
+    // Set up recording when call is active
+    if (isCallActive && !audioRecorder) {
+      // Request microphone access
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          const recorder = new MediaRecorder(stream);
+          
+          // Store audio chunks when data is available
+          recorder.ondataavailable = (e) => {
+            setRecordedChunks(chunks => [...chunks, e.data]);
+          };
+          
+          setAudioRecorder(recorder);
+        })
+        .catch(err => {
+          console.error("Error accessing microphone for call recording:", err);
+        });
+    }
     
-    // Add initial greeting from system
-    const initialMessage: Message = {
-      id: Date.now().toString(),
-      text: "Call connected. The other person's speech will appear as text here.",
-      sender: 'caller',
+    // Cleanup when call ends
+    return () => {
+      if (audioRecorder && audioRecorder.state === 'recording') {
+        audioRecorder.stop();
+      }
     };
-    
-    setMessages([initialMessage]);
+  }, [isCallActive, audioRecorder]);
+  
+  // Save recorded audio when call ends
+  useEffect(() => {
+    if (!isCallActive && recordedChunks.length > 0 && activeCallId) {
+      // Create audio blob from chunks
+      const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+      
+      // Create a form data object to send the blob
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'call-recording.webm');
+      
+      // Upload the recording
+      fetch('/api/recordings', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          // Update the call log with the recording path
+          fetch(`/api/call-logs/${activeCallId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              hasRecording: true,
+              recordingPath: data.path,
+              endTime: new Date().toISOString(),
+              duration: callDuration
+            })
+          });
+          
+          // Reset recording state
+          setRecordedChunks([]);
+          setAudioRecorder(null);
+          setActiveCallId(null);
+        })
+        .catch(error => {
+          console.error('Error saving call recording:', error);
+        });
+    }
+  }, [isCallActive, recordedChunks, activeCallId, callDuration]);
+  
+  // Save messages to call log
+  useEffect(() => {
+    if (isCallActive && activeCallId && messages.length > 1) {
+      // Get the most recent message
+      const lastMessage = messages[messages.length - 1];
+      
+      // Save message to call log
+      fetch(`/api/call-logs/${activeCallId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: lastMessage.text,
+          sender: lastMessage.sender,
+          method: lastMessage.method || null
+        })
+      })
+        .catch(error => {
+          console.error('Error saving call message:', error);
+        });
+    }
+  }, [isCallActive, activeCallId, messages]);
+  
+  const handleStartCall = async (type: 'deaf' | 'mute' | 'both') => {
+    try {
+      setIsCallActive(true);
+      setAccessibility(type);
+      setMessages([]);
+      startListening(); // Start converting caller's speech to text
+      
+      // Add initial greeting from system
+      const initialMessage: Message = {
+        id: Date.now().toString(),
+        text: "Call connected. The other person's speech will appear as text here.",
+        sender: 'caller',
+      };
+      
+      setMessages([initialMessage]);
+      
+      try {
+        // Create call log in the database
+        const response = await fetch('/api/call-logs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: 1, // Using a default user ID for now
+            mode: type,
+            language: language
+          })
+        });
+        
+        if (response.ok) {
+          const callLog = await response.json();
+          // Store the call ID for recording and messages
+          setActiveCallId(callLog.id);
+        } else {
+          console.error('Failed to create call log:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error creating call log:', error);
+      }
+      
+      // Start recording if recorder is available
+      if (audioRecorder) {
+        setIsRecording(true);
+        audioRecorder.start();
+      }
+    } catch (error) {
+      console.error('Error starting call:', error);
+    }
   };
 
-  const handleEndCall = () => {
-    setIsCallActive(false);
-    stopListening();
-    if (speaking) {
-      cancel();
+  const handleEndCall = async () => {
+    try {
+      // Stop speech recognition and synthesis
+      stopListening();
+      if (speaking) {
+        cancel();
+      }
+      
+      // Stop recording if active
+      if (isRecording && audioRecorder && audioRecorder.state === 'recording') {
+        audioRecorder.stop();
+        setIsRecording(false);
+      }
+      
+      // Update call log with end time and duration (if we have an active call)
+      if (activeCallId) {
+        try {
+          const response = await fetch(`/api/call-logs/${activeCallId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              endTime: new Date().toISOString(),
+              duration: callDuration
+            })
+          });
+          
+          if (!response.ok) {
+            console.error('Failed to update call log:', response.statusText);
+          }
+        } catch (error) {
+          console.error('Error updating call log:', error);
+        }
+      }
+      
+      // Finally set call to inactive
+      setIsCallActive(false);
+    } catch (error) {
+      console.error('Error ending call:', error);
+      setIsCallActive(false); // Ensure call is marked as inactive even if there's an error
     }
   };
 
