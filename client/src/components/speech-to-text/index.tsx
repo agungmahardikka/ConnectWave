@@ -3,8 +3,7 @@ import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip } from '@/components/ui/tooltip';
-import { TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 
 export function SpeechToTextMode({ language }: { language: string }) {
@@ -108,20 +107,22 @@ export function SpeechToTextMode({ language }: { language: string }) {
           </div>
           
           {isOffline && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center">
-                  <span className="material-icons text-sm mr-1">wifi_off</span>
-                  Offline Mode
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs max-w-[200px]">
-                  Currently operating in offline mode using built-in patterns.
-                  Connect to a network for full speech recognition capabilities.
-                </p>
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center">
+                    <span className="material-icons text-sm mr-1">wifi_off</span>
+                    Offline Mode
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs max-w-[200px]">
+                    Currently operating in offline mode using built-in patterns.
+                    Connect to a network for full speech recognition capabilities.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
         
