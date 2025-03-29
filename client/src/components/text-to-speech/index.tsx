@@ -4,6 +4,7 @@ import { Slider } from '@/components/ui/slider';
 import { apiRequest } from '@/lib/queryClient';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
+import { OfflineIndicator, useOfflineStatus } from '@/components/ui/offline-indicator';
 
 type SavedPhrase = {
   id: number;
@@ -14,6 +15,9 @@ export function TextToSpeechMode({ language }: { language: string }) {
   const [text, setText] = useState('');
   const [speechRate, setSpeechRate] = useState(1);
   const [voiceType, setVoiceType] = useState('female');
+  
+  // Track online/offline status
+  const isOffline = useOfflineStatus();
 
   const { speak, voices, speaking, cancel } = useSpeechSynthesis(language);
 
@@ -99,9 +103,17 @@ export function TextToSpeechMode({ language }: { language: string }) {
   return (
     <div className="flex-1 flex flex-col p-5 space-y-4">
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100">
-        <div className="border-b border-slate-100 p-4">
-          <h2 className="text-xl font-bold text-gradient">Text to Speech</h2>
-          <p className="text-slate-500 text-sm mt-1">Type text below and it will be spoken aloud.</p>
+        <div className="border-b border-slate-100 p-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gradient">Text to Speech</h2>
+            <p className="text-slate-500 text-sm mt-1">Type text below and it will be spoken aloud.</p>
+          </div>
+          
+          {/* Add the offline indicator component */}
+          <OfflineIndicator 
+            isOffline={isOffline}
+            mode="tts"
+          />
         </div>
         
         <div className="p-4">

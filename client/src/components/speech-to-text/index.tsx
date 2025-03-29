@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { OfflineIndicator } from '@/components/ui/offline-indicator';
+import { OfflineTutorial } from '@/components/ui/offline-tutorial';
 
 export function SpeechToTextMode({ language }: { language: string }) {
   const [settings, setSettings] = useState({
@@ -106,24 +106,11 @@ export function SpeechToTextMode({ language }: { language: string }) {
             <p className="text-slate-500 text-sm mt-1">This mode converts speech into text in real-time.</p>
           </div>
           
-          {isOffline && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center">
-                    <span className="material-icons text-sm mr-1">wifi_off</span>
-                    Offline Mode
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs max-w-[200px]">
-                    Currently operating in offline mode using built-in patterns.
-                    Connect to a network for full speech recognition capabilities.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+          {/* Enhanced offline indicator with tutorial */}
+          <OfflineIndicator 
+            isOffline={isOffline}
+            mode="stt"
+          />
         </div>
         
         {listening && (
@@ -244,10 +231,30 @@ export function SpeechToTextMode({ language }: { language: string }) {
       )}
       
       <div className="bg-white rounded-xl shadow-sm p-5 border border-slate-100">
-        <div className="flex items-center mb-3">
-          <span className="material-icons text-primary mr-2">settings</span>
-          <h3 className="font-medium text-slate-700">Recognition Settings</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center">
+            <span className="material-icons text-primary mr-2">settings</span>
+            <h3 className="font-medium text-slate-700">Recognition Settings</h3>
+          </div>
+          
+          {/* Help button for offline mode */}
+          {isOffline && (
+            <button
+              onClick={() => {
+                // Show offline tutorial
+                const tutorialElement = document.querySelector('[data-offline-tutorial-trigger]');
+                if (tutorialElement) {
+                  (tutorialElement as HTMLElement).click();
+                }
+              }}
+              className="flex items-center gap-1 text-xs py-1 px-2 bg-yellow-50 text-yellow-700 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors"
+            >
+              <span className="material-icons text-sm">help_outline</span>
+              Offline Mode Help
+            </button>
+          )}
         </div>
+        
         <div className="divide-y divide-slate-100">
           <SettingToggle 
             label="Enable Offline Mode"
