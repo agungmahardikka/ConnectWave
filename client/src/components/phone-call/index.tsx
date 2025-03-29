@@ -30,7 +30,9 @@ export function PhoneCallMode({ language }: { language: string }) {
     startListening, 
     stopListening, 
     transcript, 
+    interimTranscript,
     listening, 
+    isOffline,
     resetTranscript 
   } = useSpeechRecognition(language);
   
@@ -79,35 +81,79 @@ export function PhoneCallMode({ language }: { language: string }) {
     };
   }, [isCallActive, callTimer]);
 
-  // Handle transcript changes (caller's speech to text)
+  // Keep track of the last recognized transcript to avoid duplicates
+  const lastTranscriptRef = useRef('');
+  const processingMessageRef = useRef<Message | null>(null);
+  
+  // Handle transcript changes (caller's speech to text) with faster updates
   useEffect(() => {
-    // Check if we have a transcript and if the call is active
-    if (transcript && transcript.trim() !== '' && isCallActive) {
-      console.log("Received transcript:", transcript, "Listening:", listening);
+    if (!transcript || !transcript.trim() || !isCallActive) {
+      return;
+    }
+    
+    const currentText = transcript.trim();
+    
+    // If this is the same text we just processed, skip it
+    if (currentText === lastTranscriptRef.current) {
+      return;
+    }
+    
+    // Keep track of this transcript
+    lastTranscriptRef.current = currentText;
+    
+    // If we have a processing message, update it in place for live updates
+    if (processingMessageRef.current) {
+      // Update existing message with new text (faster live updates)
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === processingMessageRef.current?.id 
+            ? { ...msg, text: currentText }
+            : msg
+        )
+      );
       
-      // Create a new message from the caller
+      // After a delay, finalize the message
+      if (!listening || interimTranscript === '') {
+        // This is a final result now, create a new message ID for the next one
+        processingMessageRef.current = null;
+        resetTranscript();
+      }
+    } else {
+      // Create a new message for this speech
       const newMessage: Message = {
         id: Date.now().toString(),
-        text: transcript,
+        text: currentText,
         sender: 'caller',
       };
       
-      // Add it to our messages list
-      setMessages(prev => [...prev, newMessage]);
+      // Save reference to update this message as speech continues
+      processingMessageRef.current = newMessage;
       
-      // Reset the transcript to prepare for new speech
-      resetTranscript();
+      // Add message to the list
+      setMessages(prev => [...prev, newMessage]);
     }
-  }, [transcript, isCallActive, resetTranscript]);
+  }, [transcript, isCallActive, listening, interimTranscript, resetTranscript]);
   
   // Ensure we keep listening during an active call
   useEffect(() => {
     if (isCallActive && !listening && !useVoiceResponse) {
-      // If call is active but we're not listening, start listening
-      console.log("Starting speech recognition for caller...");
-      startListening();
+      // Wait a moment before restarting to avoid rapid cycles
+      const timer = setTimeout(() => {
+        console.log("Starting speech recognition for caller...");
+        startListening();
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
   }, [isCallActive, listening, useVoiceResponse, startListening]);
+  
+  // Handle offline mode notification
+  useEffect(() => {
+    if (isOffline && isCallActive) {
+      // Notify user that we're in offline mode
+      console.log("Device is offline, using offline simulation mode");
+    }
+  }, [isOffline, isCallActive]);
 
   // Auto scroll to bottom of messages
   useEffect(() => {
