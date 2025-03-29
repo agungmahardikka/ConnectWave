@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSpeechSynthesis } from '@/hooks/use-speech-synthesis';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { apiRequest } from '@/lib/queryClient';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
@@ -13,11 +14,21 @@ type SavedPhrase = {
 
 export function TextToSpeechMode({ language }: { language: string }) {
   const [text, setText] = useState('');
-  const [speechRate, setSpeechRate] = useState(1);
-  const [voiceType, setVoiceType] = useState('female');
+  const [voiceSettings, setVoiceSettings] = useState({
+    rate: 1.0,
+    pitch: 1.0,
+    volume: 1.0,
+    voiceType: 'female',
+    preferredVoice: '',
+    autoRespond: false,
+    responseDelay: 0
+  });
   
   // Track online/offline status
   const isOffline = useOfflineStatus();
+  
+  // Track whether advanced options are shown
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const { speak, voices, speaking, cancel } = useSpeechSynthesis(language);
 
@@ -50,6 +61,15 @@ export function TextToSpeechMode({ language }: { language: string }) {
     }
   });
 
+  // Update a single voice setting
+  const updateVoiceSetting = (key: keyof typeof voiceSettings, value: any) => {
+    setVoiceSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  // Speak text with current voice settings
   const handleSpeak = () => {
     if (speaking) {
       cancel();
@@ -58,7 +78,9 @@ export function TextToSpeechMode({ language }: { language: string }) {
     
     if (text.trim()) {
       speak(text, {
-        rate: speechRate,
+        rate: voiceSettings.rate,
+        pitch: voiceSettings.pitch,
+        volume: voiceSettings.volume,
         voice: getSelectedVoice()
       });
     }
@@ -69,6 +91,37 @@ export function TextToSpeechMode({ language }: { language: string }) {
       saveMutation.mutate(text);
       // Clear the text after saving
       setText('');
+      
+      // Auto-respond if enabled
+      if (voiceSettings.autoRespond) {
+        const randomResponses = [
+          "I've saved that phrase for you.",
+          "Your phrase has been saved.",
+          "Phrase added to your saved collection.",
+          "That's been stored in your phrases.",
+          "I've added that to your saved phrases."
+        ];
+        const response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
+        
+        // Delay the response if a delay is set
+        if (voiceSettings.responseDelay > 0) {
+          setTimeout(() => {
+            speak(response, {
+              rate: voiceSettings.rate,
+              pitch: voiceSettings.pitch,
+              volume: voiceSettings.volume,
+              voice: getSelectedVoice()
+            });
+          }, voiceSettings.responseDelay * 1000);
+        } else {
+          speak(response, {
+            rate: voiceSettings.rate,
+            pitch: voiceSettings.pitch,
+            volume: voiceSettings.volume,
+            voice: getSelectedVoice()
+          });
+        }
+      }
     }
   };
 
@@ -83,17 +136,27 @@ export function TextToSpeechMode({ language }: { language: string }) {
     }
     
     speak(phraseText, {
-      rate: speechRate,
+      rate: voiceSettings.rate,
+      pitch: voiceSettings.pitch,
+      volume: voiceSettings.volume,
       voice: getSelectedVoice()
     });
   };
 
+  // Get the selected voice based on preferences
   const getSelectedVoice = () => {
     const voiceOptions = voices.filter(voice => 
       voice.lang.startsWith(language) || voice.lang.startsWith(language.split('-')[0])
     );
     
-    if (voiceType === 'male') {
+    // If user has selected a specific voice by name, use that
+    if (voiceSettings.preferredVoice) {
+      const preferredVoice = voices.find(v => v.name === voiceSettings.preferredVoice);
+      if (preferredVoice) return preferredVoice;
+    }
+    
+    // Otherwise use gender preference
+    if (voiceSettings.voiceType === 'male') {
       return voiceOptions.find(voice => !voice.name.includes('Female')) || null;
     } else {
       return voiceOptions.find(voice => voice.name.includes('Female')) || null;
@@ -147,14 +210,30 @@ export function TextToSpeechMode({ language }: { language: string }) {
           </div>
           
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="flex flex-wrap items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-icons text-primary">settings</span>
+                <h3 className="font-medium text-slate-700">Voice Settings</h3>
+              </div>
+              
+              <button 
+                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                className="flex items-center gap-1 text-xs py-1 px-2 bg-white text-slate-600 rounded border border-slate-200 hover:bg-slate-50 transition-colors"
+              >
+                <span className="material-icons text-sm">{showAdvancedOptions ? 'expand_less' : 'expand_more'}</span>
+                {showAdvancedOptions ? 'Hide Advanced Options' : 'Show Advanced Options'}
+              </button>
+            </div>
+            
+            {/* Basic voice options always visible */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-3">
               <div className="flex items-center min-w-32">
                 <span className="text-primary mr-2"><span className="material-icons text-sm">record_voice_over</span></span>
                 <div className="flex items-center">
                   <span className="text-slate-600 text-sm mr-2">Voice:</span>
                   <select 
-                    value={voiceType}
-                    onChange={(e) => setVoiceType(e.target.value)}
+                    value={voiceSettings.voiceType}
+                    onChange={(e) => updateVoiceSetting('voiceType', e.target.value)}
                     className="bg-white border border-slate-200 rounded-lg p-1.5 text-sm text-slate-700 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
                   >
                     <option value="female">Female (Default)</option>
@@ -165,19 +244,118 @@ export function TextToSpeechMode({ language }: { language: string }) {
               
               <div className="flex items-center flex-1 min-w-40">
                 <span className="text-primary mr-2"><span className="material-icons text-sm">speed</span></span>
-                <span className="text-slate-600 text-sm mr-2">Speed: {speechRate.toFixed(1)}x</span>
+                <span className="text-slate-600 text-sm mr-2">Speed: {voiceSettings.rate.toFixed(1)}x</span>
                 <div className="w-full max-w-36">
                   <Slider 
-                    value={[speechRate]} 
+                    value={[voiceSettings.rate]} 
                     min={0.5} 
                     max={2} 
                     step={0.1}
-                    onValueChange={(values) => setSpeechRate(values[0])}
+                    onValueChange={(values) => updateVoiceSetting('rate', values[0])}
                     className="mt-0.5"
                   />
                 </div>
               </div>
             </div>
+            
+            {/* Advanced options */}
+            {showAdvancedOptions && (
+              <div className="border-t border-slate-200 pt-3 space-y-3">
+                <h4 className="text-sm font-medium text-slate-600 mb-2">Advanced Voice Controls</h4>
+                
+                {/* Pitch control */}
+                <div className="flex items-center gap-3">
+                  <div className="w-24 flex-shrink-0">
+                    <span className="text-slate-600 text-sm">Pitch: {voiceSettings.pitch.toFixed(1)}</span>
+                  </div>
+                  <div className="flex-1">
+                    <Slider 
+                      value={[voiceSettings.pitch]} 
+                      min={0.5} 
+                      max={2} 
+                      step={0.1}
+                      onValueChange={(values) => updateVoiceSetting('pitch', values[0])}
+                    />
+                  </div>
+                </div>
+                
+                {/* Volume control */}
+                <div className="flex items-center gap-3">
+                  <div className="w-24 flex-shrink-0">
+                    <span className="text-slate-600 text-sm">Volume: {(voiceSettings.volume * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex-1">
+                    <Slider 
+                      value={[voiceSettings.volume]} 
+                      min={0.1} 
+                      max={1} 
+                      step={0.1}
+                      onValueChange={(values) => updateVoiceSetting('volume', values[0])}
+                    />
+                  </div>
+                </div>
+                
+                {/* Available voices if not offline */}
+                {!isOffline && voices.length > 0 && (
+                  <div className="pt-2">
+                    <label className="text-slate-600 text-sm block mb-1">Specific Voice:</label>
+                    <select 
+                      value={voiceSettings.preferredVoice}
+                      onChange={(e) => updateVoiceSetting('preferredVoice', e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm text-slate-700"
+                    >
+                      <option value="">Auto-select based on gender</option>
+                      {voices
+                        .filter(voice => voice.lang.startsWith(language) || voice.lang.startsWith(language.split('-')[0]))
+                        .map(voice => (
+                          <option key={voice.name} value={voice.name}>
+                            {voice.name} ({voice.lang})
+                          </option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                )}
+                
+                {/* Response preferences */}
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-3">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center">
+                    <span className="material-icons text-blue-600 mr-1 text-sm">smart_toy</span>
+                    Response Preferences
+                  </h4>
+                  
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-blue-700 text-sm flex items-center gap-1">
+                      <span className="material-icons text-blue-600 text-sm">reply_all</span>
+                      Auto-respond when saving phrases
+                    </label>
+                    <div className="flex-shrink-0">
+                      <Switch 
+                        checked={voiceSettings.autoRespond}
+                        onCheckedChange={(checked: boolean) => updateVoiceSetting('autoRespond', checked)}
+                      />
+                    </div>
+                  </div>
+                  
+                  {voiceSettings.autoRespond && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="w-24 flex-shrink-0">
+                        <span className="text-blue-700 text-sm">Delay: {voiceSettings.responseDelay}s</span>
+                      </div>
+                      <div className="flex-1">
+                        <Slider 
+                          value={[voiceSettings.responseDelay]} 
+                          min={0} 
+                          max={3} 
+                          step={0.5}
+                          onValueChange={(values) => updateVoiceSetting('responseDelay', values[0])}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
