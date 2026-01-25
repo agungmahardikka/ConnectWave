@@ -132,7 +132,24 @@ export function PhoneCallMode({ language }: { language: string }) {
       // Add message to the list
       setMessages(prev => [...prev, newMessage]);
     }
-  }, [transcript, isCallActive, listening, interimTranscript, resetTranscript]);
+  }, [transcript, isCallActive, listening, interimTranscript, resetTranscript]); 
+
+ /* useEffect(() => {
+  if (!isCallActive) return;
+
+  // When caller finishes speaking, create a new chat message
+  if (!listening && transcript.trim() !== "") {
+    const callerMessage: Message = {
+      id: Date.now().toString(),
+      text: transcript.trim(),
+      sender: "caller",
+    };
+
+    setMessages(prev => [...prev, callerMessage]);
+    resetTranscript();
+  }
+}, [transcript, listening, isCallActive, resetTranscript]);
+*/
   
   // Ensure we keep listening during an active call
   useEffect(() => {
